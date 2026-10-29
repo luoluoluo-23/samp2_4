@@ -1,0 +1,23 @@
+# Qt Creator / qmake 构建产物
+build/
+build-*/
+debug/
+release/
+*.o
+*.obj
+*.exe
+*.dll
+.qmake.stash
+Makefile
+Makefile.*
+ui_*.h
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+*.pdb
+*.ilk
+*.idb
+*.res
+
+# Qt Creator 本地环境（不同机器路径不同，可选提交）
+*.autosave
