@@ -3,15 +3,19 @@
 
 #include <QMainWindow>
 
+#include "calculator.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+class QAbstractButton;
+
 /**
  * @brief 计算器主窗口。
  *
- * 当前（实验步骤 1）只完成了 UI 布局与最基础的数字键/小数点/退格/清除接线，
- * 四则运算、键盘事件等在后续实验步骤中逐步补充。
+ * 界面上的所有按键都先转换成统一的“记号”（数字、"+"、"."、"C" 等）再交给
+ * applyToken() 处理，鼠标点击和键盘按键因此共用一条代码路径。
  */
 class MainWindow : public QMainWindow
 {
@@ -22,13 +26,17 @@ public:
     ~MainWindow() override;
 
 private slots:
-    void onDigitClicked();      ///< 0-9 十个数字键共用的槽，用 sender() 区分
-    void onDotClicked();        ///< 小数点
-    void onBackspaceClicked();  ///< 退格
-    void onClearAllClicked();   ///< 清除
+    /// 所有按键共用的槽，参数是被点击的按钮
+    void onButtonClicked(QAbstractButton *button);
 
 private:
+    /// 把一个记号交给核心逻辑，并刷新显示
+    void applyToken(const QString &token);
+    /// 把核心逻辑的当前状态同步到显示区
+    void refreshDisplay();
+
     Ui::MainWindow *ui;
+    Calculator m_calculator;
 };
 
 #endif // MAINWINDOW_H

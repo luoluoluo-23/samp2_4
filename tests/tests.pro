@@ -6,6 +6,9 @@ TARGET    = lab1_tests
 
 INCLUDEPATH += ..
 SOURCES += test_main.cpp \
-           ../mainwindow.cpp
-HEADERS += ../mainwindow.h
+           ../mainwindow.cpp \
+           ../calculator.cpp
+HEADERS += ../mainwindow.h \
+           ../calculator.h \
+           ../tokens.h
 FORMS   += ../mainwindow.ui

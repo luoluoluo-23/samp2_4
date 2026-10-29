@@ -1,7 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QAbstractButton>
+#include <QButtonGroup>
 #include <QPushButton>
+
+#include "tokens.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -9,19 +13,17 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // 十个数字键共用一个槽：用 sender() 取出被点击按钮上的文字
-    const QList<QPushButton *> digitButtons = {
-        ui->btn_number_0, ui->btn_number_1, ui->btn_number_2, ui->btn_number_3,
-        ui->btn_number_4, ui->btn_number_5, ui->btn_number_6, ui->btn_number_7,
-        ui->btn_number_8, ui->btn_number_9
-    };
-    for (QPushButton *button : digitButtons) {
-        connect(button, &QPushButton::clicked, this, &MainWindow::onDigitClicked);
+    // 所有按键放进同一个按钮组，统一走 onButtonClicked()；
+    // 按钮上的文字就是“记号”，键盘事件稍后也产生同样的记号。
+    auto *buttonGroup = new QButtonGroup(this);
+    const QList<QPushButton *> buttons = findChildren<QPushButton *>();
+    for (QPushButton *button : buttons) {
+        buttonGroup->addButton(button);
     }
+    connect(buttonGroup, QOverload<QAbstractButton *>::of(&QButtonGroup::buttonClicked),
+            this, &MainWindow::onButtonClicked);
 
-    connect(ui->btn_dot,       &QPushButton::clicked, this, &MainWindow::onDotClicked);
-    connect(ui->btn_backspace, &QPushButton::clicked, this, &MainWindow::onBackspaceClicked);
-    connect(ui->btn_clear_all, &QPushButton::clicked, this, &MainWindow::onClearAllClicked);
+    refreshDisplay();
 }
 
 MainWindow::~MainWindow()
@@ -29,43 +31,39 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::onDigitClicked()
+void MainWindow::onButtonClicked(QAbstractButton *button)
 {
-    const QPushButton *button = qobject_cast<QPushButton *>(sender());
     if (button == nullptr) {
         return;
     }
-
-    QString text = ui->display->text();
-    // 显示区起始值是 "0"，直接追加会变成 "05" 这种形式，这里把孤立的 0 顶掉
-    if (text == QLatin1String("0")) {
-        text.clear();
-    }
-    text += button->text();
-    ui->display->setText(text);
+    applyToken(button->text());
 }
 
-void MainWindow::onDotClicked()
+void MainWindow::applyToken(const QString &token)
 {
-    // 同一个操作数里只允许出现一个小数点
-    QString text = ui->display->text();
-    if (!text.contains(QLatin1Char('.'))) {
-        text += QLatin1Char('.');
-        ui->display->setText(text);
+    if (token.isEmpty()) {
+        return;
     }
+
+    if (token.length() == 1 && token.at(0).isDigit()) {
+        m_calculator.inputDigit(token);
+    } else if (token == Token::dot()) {
+        m_calculator.inputDot();
+    } else if (token == Token::backspace()) {
+        m_calculator.backspace();
+    } else if (token == Token::clear()) {
+        m_calculator.clearAll();
+    } else if (token == Token::sign()) {
+        m_calculator.toggleSign();
+    } else if (token == Token::percent()) {
+        m_calculator.inputPercent();
+    }
+    // "+"、"-"、"×"、"÷"、"=" 在实验步骤 3 实现
+
+    refreshDisplay();
 }
 
-void MainWindow::onBackspaceClicked()
+void MainWindow::refreshDisplay()
 {
-    QString text = ui->display->text();
-    text.chop(1);
-    if (text.isEmpty()) {
-        text = QLatin1String("0");
-    }
-    ui->display->setText(text);
-}
-
-void MainWindow::onClearAllClicked()
-{
-    ui->display->setText(QLatin1String("0"));
+    ui->display->setText(m_calculator.displayText());
 }
