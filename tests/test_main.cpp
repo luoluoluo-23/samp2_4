@@ -14,6 +14,7 @@
 #include <QApplication>
 #include <QFile>
 #include <QGridLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPixmap>
 #include <QPushButton>
@@ -94,12 +95,16 @@ static QString clickSequence(MainWindow &window, const QStringList &tokens)
     return display != nullptr ? display->text() : QString();
 }
 
-/// --screenshot 模式：渲染主窗口
-static int shoot(QApplication &app, const QString &path)
+/// --screenshot 模式：渲染主窗口（可先用 --input "1 2 + 3 4 =" 点击一串按键）
+static int shoot(QApplication &app, const QString &path, const QStringList &tokens)
 {
     MainWindow window;
     window.show();
     app.processEvents();
+    if (!tokens.isEmpty()) {
+        clickSequence(window, tokens);
+        app.processEvents();
+    }
     const QPixmap pixmap = window.grab();
     return pixmap.save(path) ? 0 : 1;
 }
@@ -206,6 +211,67 @@ static void checkInputHandling(MainWindow &window)
     }
 }
 
+/// 读取显示区上方的小字（算式）
+static QString expressionText(MainWindow &window)
+{
+    auto *label = window.findChild<QLabel *>(QStringLiteral("expressionLabel"));
+    return label != nullptr ? label->text() : QStringLiteral("<没有 expressionLabel>");
+}
+
+/// 四则运算与状态管理检查
+static void checkArithmetic(MainWindow &window)
+{
+    struct Case {
+        QStringList tokens;
+        QString expected;
+        QString note;
+    };
+    const QVector<Case> cases = {
+        {{"1", "2", "+", "3", "4", "="},           QStringLiteral("46"),
+         QStringLiteral("12 + 34")},
+        {{"7", "×", "8", "="},                     QStringLiteral("56"),
+         QStringLiteral("7 × 8")},
+        {{"9", "-", "4", "="},                     QStringLiteral("5"),
+         QStringLiteral("9 - 4")},
+        {{"8", "÷", "2", "="},                     QStringLiteral("4"),
+         QStringLiteral("8 ÷ 2")},
+        {{"1", ".", "5", "+", "2", ".", "5", "="}, QStringLiteral("4"),
+         QStringLiteral("小数相加 1.5 + 2.5")},
+        {{"1", "0", "÷", "4", "="},                QStringLiteral("2.5"),
+         QStringLiteral("10 ÷ 4 保留小数")},
+        {{"0", ".", "1", "+", "0", ".", "2", "="}, QStringLiteral("0.3"),
+         QStringLiteral("0.1 + 0.2 不出现浮点尾巴")},
+        {{"2", "5", "-", "3", "0", "="},           QStringLiteral("-5"),
+         QStringLiteral("25 - 30 得到负数")},
+        {{"5", "+", "3"},                          QStringLiteral("3"),
+         QStringLiteral("按下运算符后再输入，显示第二个操作数")},
+        {{"5", "="},                               QStringLiteral("5"),
+         QStringLiteral("没有运算符时按等号不改变显示")}
+    };
+
+    for (const Case &item : cases) {
+        const QString actual = clickSequence(window, item.tokens);
+        check(actual == item.expected,
+              QStringLiteral("运算：%1（%2）").arg(item.tokens.join(QLatin1Char(' ')), item.note),
+              QStringLiteral("期望 %1，实际 %2").arg(item.expected, actual));
+    }
+
+    // 算式提示：按下运算符后应显示第一个操作数和运算符
+    clickSequence(window, {"1", "2", "+"});
+    check(expressionText(window) == QStringLiteral("12 +"),
+          QStringLiteral("算式提示：按下 + 后显示“12 +”"), expressionText(window));
+
+    // 等号之后应显示完整算式
+    clickSequence(window, {"6", "×", "7", "="});
+    check(expressionText(window) == QStringLiteral("6 × 7 ="),
+          QStringLiteral("算式提示：等号后显示“6 × 7 =”"), expressionText(window));
+
+    // 清除后算式提示也要清空
+    clickSequence(window, {"1", "2", "+", "3", "C"});
+    check(expressionText(window).isEmpty(),
+          QStringLiteral("清除后算式提示为空"), expressionText(window));
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -213,7 +279,12 @@ int main(int argc, char *argv[])
     const QStringList args = QCoreApplication::arguments();
     const int shotIndex = args.indexOf(QStringLiteral("--screenshot"));
     if (shotIndex > 0 && shotIndex + 1 < args.size()) {
-        return shoot(app, args.at(shotIndex + 1));
+        QStringList tokens;
+        const int inputIndex = args.indexOf(QStringLiteral("--input"));
+        if (inputIndex > 0 && inputIndex + 1 < args.size()) {
+            tokens = args.at(inputIndex + 1).split(QLatin1Char(' '), QString::SkipEmptyParts);
+        }
+        return shoot(app, args.at(shotIndex + 1), tokens);
     }
 
     MainWindow window;
@@ -222,6 +293,7 @@ int main(int argc, char *argv[])
 
     checkUiStructure(window);
     checkInputHandling(window);
+    checkArithmetic(window);
 
     flushReport(QStringLiteral("test-report.txt"));
     QTextStream(stdout) << "checks=" << (g_passed + g_failed)

@@ -37,6 +37,27 @@
      <number>8</number>
     </property>
     <item>
+     <widget class="QLabel" name="expressionLabel">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>24</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QLineEdit" name="display">
       <property name="minimumSize">
        <size>

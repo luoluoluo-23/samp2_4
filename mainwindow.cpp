@@ -57,8 +57,17 @@ void MainWindow::applyToken(const QString &token)
         m_calculator.toggleSign();
     } else if (token == Token::percent()) {
         m_calculator.inputPercent();
+    } else if (token == Token::add()) {
+        m_calculator.inputOperator(Calculator::Operator::Add);
+    } else if (token == Token::subtract()) {
+        m_calculator.inputOperator(Calculator::Operator::Subtract);
+    } else if (token == Token::multiply()) {
+        m_calculator.inputOperator(Calculator::Operator::Multiply);
+    } else if (token == Token::divide()) {
+        m_calculator.inputOperator(Calculator::Operator::Divide);
+    } else if (token == Token::equals()) {
+        m_calculator.inputEquals();
     }
-    // "+"、"-"、"×"、"÷"、"=" 在实验步骤 3 实现
 
     refreshDisplay();
 }
@@ -66,4 +75,5 @@ void MainWindow::applyToken(const QString &token)
 void MainWindow::refreshDisplay()
 {
     ui->display->setText(m_calculator.displayText());
+    ui->expressionLabel->setText(m_calculator.expressionText());
 }
