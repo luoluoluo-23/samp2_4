@@ -272,6 +272,68 @@ static void checkArithmetic(MainWindow &window)
           QStringLiteral("清除后算式提示为空"), expressionText(window));
 }
 
+/// 连续运算与边界情况检查
+static void checkEdgeCases(MainWindow &window)
+{
+    struct Case {
+        QStringList tokens;
+        QString expected;
+        QString note;
+    };
+    const QVector<Case> cases = {
+        // —— 连续运算 ——
+        {{"2", "+", "3", "+", "4", "="},           QStringLiteral("9"),
+         QStringLiteral("连续加法 2+3+4")},
+        {{"1", "0", "-", "3", "×", "2", "="},      QStringLiteral("14"),
+         QStringLiteral("混合运算 (10-3)×2，按顺序计算")},
+        {{"8", "÷", "2", "+", "1", "="},           QStringLiteral("5"),
+         QStringLiteral("先除后加")},
+        {{"5", "+", "3", "+"},                     QStringLiteral("8"),
+         QStringLiteral("连续运算时中间结果立即显示")},
+
+        // —— 除零 ——
+        {{"5", "÷", "0", "="},                     QStringLiteral("除数不能为0"),
+         QStringLiteral("除数为 0 给出错误提示")},
+        {{"5", "÷", "0", "=", "7"},                QStringLiteral("7"),
+         QStringLiteral("除零后按数字即重新开始")},
+        {{"5", "÷", "0", "=", "+"},                QStringLiteral("除数不能为0"),
+         QStringLiteral("除零后按运算符被忽略，提示保留")},
+        {{"5", "÷", "0", "=", "C", "8", "+", "1", "="}, QStringLiteral("9"),
+         QStringLiteral("除零后按 C 可正常重新计算")},
+        {{"9", "÷", "0", ".", "5", "="},           QStringLiteral("18"),
+         QStringLiteral("除数 0.5 不是零，正常计算 9÷0.5")},
+
+        // —— 计算结果后继续输入 ——
+        {{"2", "+", "3", "=", "4"},                QStringLiteral("4"),
+         QStringLiteral("出结果后按数字开始新的一轮")},
+        {{"2", "+", "3", "=", "4", "×", "2", "="}, QStringLiteral("8"),
+         QStringLiteral("用上一次的结果继续运算")},
+        {{"2", "+", "3", "=", "="},                QStringLiteral("8"),
+         QStringLiteral("连按等号重复上一次运算")},
+        {{"2", "+", "3", "=", "=", "="},           QStringLiteral("11"),
+         QStringLiteral("连按三次等号")},
+
+        // —— 退格 ——
+        {{"1", "2", "+", "3", "4", "←"},           QStringLiteral("3"),
+         QStringLiteral("退格修改第二个操作数")},
+        {{"1", "2", "+", "←"},                     QStringLiteral("1"),
+         QStringLiteral("刚按完运算符时退格修改第一个操作数")},
+        {{"1", "2", "+", "3", "=", "←"},           QStringLiteral("15"),
+         QStringLiteral("结果不允许退格修改")},
+
+        // —— 清除后重新计算 ——
+        {{"1", "2", "+", "3", "C", "8", "+", "2", "="}, QStringLiteral("10"),
+         QStringLiteral("清除后重新计算 8+2")}
+    };
+
+    for (const Case &item : cases) {
+        const QString actual = clickSequence(window, item.tokens);
+        check(actual == item.expected,
+              QStringLiteral("边界：%1（%2）").arg(item.tokens.join(QLatin1Char(' ')), item.note),
+              QStringLiteral("期望 %1，实际 %2").arg(item.expected, actual));
+    }
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -294,6 +356,7 @@ int main(int argc, char *argv[])
     checkUiStructure(window);
     checkInputHandling(window);
     checkArithmetic(window);
+    checkEdgeCases(window);
 
     flushReport(QStringLiteral("test-report.txt"));
     QTextStream(stdout) << "checks=" << (g_passed + g_failed)
