@@ -25,6 +25,10 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    /// 键盘事件：把按键翻译成和鼠标点击一样的记号
+    void keyPressEvent(QKeyEvent *event) override;
+
 private slots:
     /// 所有按键共用的槽，参数是被点击的按钮
     void onButtonClicked(QAbstractButton *button);
@@ -32,12 +36,16 @@ private slots:
 private:
     /// 建立按键到处理逻辑的连接
     void setupConnections();
+    /// 让键盘事件直达窗口，而不是被按钮/显示区截获
+    void setupFocusPolicy();
     /// 从 Qt 资源加载样式表
     void loadStyleSheet();
     /// 把一个记号交给核心逻辑，并刷新显示
     void applyToken(const QString &token);
     /// 把核心逻辑的当前状态同步到显示区
     void refreshDisplay();
+    /// Qt 按键码 -> 记号；不认识的键返回空串
+    static QString tokenForKey(int key);
 
     Ui::MainWindow *ui;
     Calculator m_calculator;

@@ -14,6 +14,7 @@
 #include <QApplication>
 #include <QFile>
 #include <QGridLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPixmap>
@@ -78,11 +79,13 @@ static QString buttonNameForToken(const QString &token)
 }
 
 /// 按顺序“点击”若干按钮，返回最后的显示内容（模拟鼠标输入）
-static QString clickSequence(MainWindow &window, const QStringList &tokens)
+static QString clickSequence(MainWindow &window, const QStringList &tokens, bool clearFirst = true)
 {
-    auto *clear = window.findChild<QPushButton *>(QStringLiteral("btn_clear_all"));
-    if (clear != nullptr) {
-        clear->click();
+    if (clearFirst) {
+        auto *clear = window.findChild<QPushButton *>(QStringLiteral("btn_clear_all"));
+        if (clear != nullptr) {
+            clear->click();
+        }
     }
     for (const QString &token : tokens) {
         auto *button = window.findChild<QPushButton *>(buttonNameForToken(token));
@@ -90,6 +93,50 @@ static QString clickSequence(MainWindow &window, const QStringList &tokens)
             return QStringLiteral("<没有对应 %1 的按钮>").arg(token);
         }
         button->click();
+    }
+    auto *display = window.findChild<QLineEdit *>(QStringLiteral("display"));
+    return display != nullptr ? display->text() : QString();
+}
+
+/// 记号 -> Qt 按键码
+static int keyForToken(const QString &token)
+{
+    if (token.size() == 1 && token.at(0).isDigit()) {
+        return Qt::Key_0 + token.toInt();
+    }
+    if (token == Token::dot())       { return Qt::Key_Period; }
+    if (token == Token::add())       { return Qt::Key_Plus; }
+    if (token == Token::subtract())  { return Qt::Key_Minus; }
+    if (token == Token::multiply())  { return Qt::Key_Asterisk; }
+    if (token == Token::divide())    { return Qt::Key_Slash; }
+    if (token == Token::equals())    { return Qt::Key_Return; }
+    if (token == Token::backspace()) { return Qt::Key_Backspace; }
+    if (token == Token::clear())     { return Qt::Key_Escape; }
+    if (token == Token::percent())   { return Qt::Key_Percent; }
+    return 0;
+}
+
+/// 发送一次完整按键（按下 + 释放）
+static void sendKey(MainWindow &window, int key)
+{
+    QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+    QApplication::sendEvent(&window, &press);
+    QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
+    QApplication::sendEvent(&window, &release);
+}
+
+/// 用键盘敲入一串记号（模拟键盘输入）
+static QString keyboardSequence(MainWindow &window, const QStringList &tokens, bool clearFirst = true)
+{
+    if (clearFirst) {
+        sendKey(window, Qt::Key_Escape);
+    }
+    for (const QString &token : tokens) {
+        const int key = keyForToken(token);
+        if (key == 0) {
+            return QStringLiteral("<没有对应 %1 的按键>").arg(token);
+        }
+        sendKey(window, key);
     }
     auto *display = window.findChild<QLineEdit *>(QStringLiteral("display"));
     return display != nullptr ? display->text() : QString();
@@ -334,6 +381,73 @@ static void checkEdgeCases(MainWindow &window)
     }
 }
 
+/// 键盘输入检查：键盘能完成的运算，以及鼠标/键盘结果一致性
+static void checkKeyboard(MainWindow &window)
+{
+    struct Case {
+        QStringList tokens;
+        QString expected;
+        QString note;
+    };
+    const QVector<Case> cases = {
+        {{"1", "2", "+", "3", "4", "="},  QStringLiteral("46"),
+         QStringLiteral("键盘 12+34=")},
+        {{"7", "×", "8", "="},            QStringLiteral("56"),
+         QStringLiteral("键盘 7*8=")},
+        {{"9", "-", "4", "="},            QStringLiteral("5"),
+         QStringLiteral("键盘 9-4=")},
+        {{"8", "÷", "2", "="},            QStringLiteral("4"),
+         QStringLiteral("键盘 8/2=")},
+        {{"1", ".", "5", "+", "2", ".", "5", "="}, QStringLiteral("4"),
+         QStringLiteral("键盘小数运算")},
+        {{"1", "2", "3", "←"},            QStringLiteral("12"),
+         QStringLiteral("键盘退格")},
+        {{"1", "2", "C"},                 QStringLiteral("0"),
+         QStringLiteral("键盘 Esc 清除")},
+        {{"5", "÷", "0", "="},            QStringLiteral("除数不能为0"),
+         QStringLiteral("键盘除零")},
+        {{"2", "+", "3", "+", "4", "="},  QStringLiteral("9"),
+         QStringLiteral("键盘连续运算")},
+        {{"2", "+", "3", "=", "="},       QStringLiteral("8"),
+         QStringLiteral("键盘连按等号")}
+    };
+
+    for (const Case &item : cases) {
+        const QString actual = keyboardSequence(window, item.tokens);
+        check(actual == item.expected,
+              QStringLiteral("键盘：%1（%2）").arg(item.tokens.join(QLatin1Char(' ')), item.note),
+              QStringLiteral("期望 %1，实际 %2").arg(item.expected, actual));
+    }
+
+    // 同一串输入，鼠标点出来和键盘敲出来必须完全一致（复用同一套逻辑的直接证据）
+    const QVector<QStringList> sharedSequences = {
+        {"1", "2", "+", "3", "4", "="},
+        {"9", "÷", "3", "-", "1", "="},
+        {"2", ".", "5", "×", "4", "="},
+        {"1", "0", "÷", "0", "="},
+        {"2", "+", "3", "+", "4", "="},
+        {"5", "+", "3", "=", "="},
+        {"1", "2", "3", "←", "←"}
+    };
+    for (const QStringList &tokens : sharedSequences) {
+        const QString byMouse = clickSequence(window, tokens);
+        const QString byKeyboard = keyboardSequence(window, tokens);
+        check(byMouse == byKeyboard,
+              QStringLiteral("鼠标与键盘结果一致：%1").arg(tokens.join(QLatin1Char(' '))),
+              QStringLiteral("鼠标 %1 / 键盘 %2").arg(byMouse, byKeyboard));
+    }
+
+    // 鼠标与键盘混合输入：点 1、2，敲 +，点 3、4，敲回车
+    clickSequence(window, {"1", "2"});
+    sendKey(window, Qt::Key_Plus);
+    clickSequence(window, {"3", "4"}, false);
+    sendKey(window, Qt::Key_Return);
+    auto *display = window.findChild<QLineEdit *>(QStringLiteral("display"));
+    const QString mixed = display != nullptr ? display->text() : QString();
+    check(mixed == QStringLiteral("46"),
+          QStringLiteral("鼠标与键盘混合输入 12 + 34 ="), mixed);
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -357,6 +471,7 @@ int main(int argc, char *argv[])
     checkInputHandling(window);
     checkArithmetic(window);
     checkEdgeCases(window);
+    checkKeyboard(window);
 
     flushReport(QStringLiteral("test-report.txt"));
     QTextStream(stdout) << "checks=" << (g_passed + g_failed)
