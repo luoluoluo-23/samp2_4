@@ -30,6 +30,10 @@ private slots:
     void onButtonClicked(QAbstractButton *button);
 
 private:
+    /// 建立按键到处理逻辑的连接
+    void setupConnections();
+    /// 从 Qt 资源加载样式表
+    void loadStyleSheet();
     /// 把一个记号交给核心逻辑，并刷新显示
     void applyToken(const QString &token);
     /// 把核心逻辑的当前状态同步到显示区

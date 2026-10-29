@@ -2,7 +2,9 @@
 #include "ui_mainwindow.h"
 
 #include <QAbstractButton>
+#include <QApplication>
 #include <QButtonGroup>
+#include <QFile>
 #include <QPushButton>
 
 #include "tokens.h"
@@ -13,8 +15,20 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    setupConnections();
+    loadStyleSheet();
+    refreshDisplay();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::setupConnections()
+{
     // 所有按键放进同一个按钮组，统一走 onButtonClicked()；
-    // 按钮上的文字就是“记号”，键盘事件稍后也产生同样的记号。
+    // 按钮上的文字就是“记号”，键盘事件也产生同样的记号。
     auto *buttonGroup = new QButtonGroup(this);
     const QList<QPushButton *> buttons = findChildren<QPushButton *>();
     for (QPushButton *button : buttons) {
@@ -22,13 +36,15 @@ MainWindow::MainWindow(QWidget *parent)
     }
     connect(buttonGroup, QOverload<QAbstractButton *>::of(&QButtonGroup::buttonClicked),
             this, &MainWindow::onButtonClicked);
-
-    refreshDisplay();
 }
 
-MainWindow::~MainWindow()
+void MainWindow::loadStyleSheet()
 {
-    delete ui;
+    // 样式表放在 :/style.qss（resources.qrc），界面与样式分离，改配色不用动代码
+    QFile styleFile(QStringLiteral(":/style.qss"));
+    if (styleFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qApp->setStyleSheet(QString::fromUtf8(styleFile.readAll()));
+    }
 }
 
 void MainWindow::onButtonClicked(QAbstractButton *button)
