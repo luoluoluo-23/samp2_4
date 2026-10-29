@@ -19,5 +19,10 @@ qrc_*.cpp
 *.idb
 *.res
 
-# Qt Creator 本地环境（不同机器路径不同，可选提交）
+# Qt Creator 本地环境（含本机绝对路径，且每次打开都会被改写时间戳，不提交）
+*.pro.user
+*.pro.user.*
 *.autosave
+
+# 自动化检查生成的报告
+test-report.txt
