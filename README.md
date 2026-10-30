@@ -11,7 +11,7 @@ main.cpp            程序入口
 mainwindow.h/.cpp   主窗口：界面、按键/键盘事件分发
 calculator.h/.cpp   计算状态机（不依赖界面，可单独测试）
 tokens.h            鼠标与键盘共用的“记号”定义
-style.qss           深色主题样式表
+style.qss           灰白简约主题样式表
 resources.qrc       把 style.qss 打进 Qt 资源
 tests/              自动化检查程序（110 项）
 docs/               各步骤界面截图

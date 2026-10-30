@@ -1,79 +1,75 @@
 /* ------------------------------------------------------------------
- * 计算器深色主题（Qt Style Sheets）
- * 参考手机计算器的配色：
- *   数字键   深灰   #333333
- *   功能键   浅灰   #a5a5a5（C、←、%、±）
- *   运算符   橙色   #ff9f0a（÷ × - + =）
+ * 简约灰白主题（Qt Style Sheets）
+ * 只保留灰、白两色，靠明暗和边框区分按键类别，不使用彩色。
  * ------------------------------------------------------------------ */
 
-/* 窗口与显示区背景 */
+/* 窗口背景 */
 QMainWindow,
 QWidget#centralwidget {
-    background-color: #1c1c1e;
+    background-color: #f2f2f2;
 }
 
 /* 显示区上方的小字（算式提示） */
 QLabel#expressionLabel {
-    color: #8e8e93;
+    color: #888888;
     padding-right: 12px;
 }
 
-/* 主显示区：去掉边框，白字，右对齐由 .ui 中的 alignment 保证 */
+/* 主显示区：白底 + 浅灰边框 */
 QLineEdit#display {
-    background-color: #1c1c1e;
-    border: none;
-    color: #ffffff;
-    padding-right: 12px;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    color: #222222;
+    padding-right: 10px;
 }
 
 /* 所有按键的公共样式 */
 QPushButton {
-    background-color: #333333;
-    color: #ffffff;
-    border: none;
-    border-radius: 12px;
+    background-color: #fafafa;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    color: #222222;
     font-size: 22px;
 }
 
 QPushButton:hover {
-    background-color: #4a4a4a;
+    background-color: #eeeeee;
 }
 
 QPushButton:pressed {
-    background-color: #5f5f5f;
+    background-color: #dedede;
 }
 
-/* 功能键：C、←、%、± —— 浅灰底黑字，与数字键区分 */
+/* 功能键：C、←、%、± —— 比数字键稍深一点 */
 QPushButton#btn_clear_all,
 QPushButton#btn_backspace,
 QPushButton#btn_percent,
 QPushButton#btn_sign {
-    background-color: #a5a5a5;
-    color: #000000;
+    background-color: #e8e8e8;
 }
 
 QPushButton#btn_clear_all:hover,
 QPushButton#btn_backspace:hover,
 QPushButton#btn_percent:hover,
 QPushButton#btn_sign:hover {
-    background-color: #bfbfbf;
+    background-color: #dcdcdc;
 }
 
 QPushButton#btn_clear_all:pressed,
 QPushButton#btn_backspace:pressed,
 QPushButton#btn_percent:pressed,
 QPushButton#btn_sign:pressed {
-    background-color: #d4d4d4;
+    background-color: #cfcfcf;
 }
 
-/* 运算符：÷ × - + = —— 橙色底白字，视觉上作为一类 */
+/* 运算符：÷ × - + = —— 再深一档，字号略大 */
 QPushButton#btn_divide,
 QPushButton#btn_multiply,
 QPushButton#btn_minus,
 QPushButton#btn_plus,
 QPushButton#btn_equals {
-    background-color: #ff9f0a;
-    color: #ffffff;
+    background-color: #dcdcdc;
     font-size: 24px;
 }
 
@@ -82,7 +78,7 @@ QPushButton#btn_multiply:hover,
 QPushButton#btn_minus:hover,
 QPushButton#btn_plus:hover,
 QPushButton#btn_equals:hover {
-    background-color: #ffb340;
+    background-color: #d0d0d0;
 }
 
 QPushButton#btn_divide:pressed,
@@ -90,5 +86,5 @@ QPushButton#btn_multiply:pressed,
 QPushButton#btn_minus:pressed,
 QPushButton#btn_plus:pressed,
 QPushButton#btn_equals:pressed {
-    background-color: #ffc76b;
+    background-color: #c4c4c4;
 }
